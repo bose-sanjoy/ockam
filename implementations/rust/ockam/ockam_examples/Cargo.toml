@@ -1,0 +1,8 @@
+[package]
+name = "ockam_examples"
+version = "0.0.0"
+authors = ["Ockam Developers"]
+edition = "2018"
+
+[dependencies]
+ockam = "0"
