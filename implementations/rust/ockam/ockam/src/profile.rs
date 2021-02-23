@@ -9,6 +9,7 @@ pub use identifiers::*;
 mod key_attributes;
 pub use key_attributes::*;
 mod change;
+use crate::attestation::Attestation;
 use crate::history::ProfileChangeHistory;
 pub use change::*;
 
@@ -146,8 +147,16 @@ impl Profile {
         key_attributes: KeyAttributes,
         attributes: Option<ProfileEventAttributes>,
     ) -> ockam_core::Result<()> {
-        let root_secret = self.get_root_secret()?;
-        let event = self.create_key_event(key_attributes, attributes, Some(&root_secret))?;
+        let event = {
+            let mut vault = self.vault.lock().unwrap();
+            let root_secret = self.get_root_secret(vault.deref())?;
+            self.create_key_event(
+                key_attributes,
+                attributes,
+                Some(&root_secret),
+                vault.deref_mut(),
+            )?
+        };
         self.apply_no_verification(event)
     }
 
@@ -158,8 +167,11 @@ impl Profile {
         key_attributes: KeyAttributes,
         attributes: Option<ProfileEventAttributes>,
     ) -> ockam_core::Result<()> {
-        let root_secret = self.get_root_secret()?;
-        let event = self.rotate_key_event(key_attributes, attributes, &root_secret)?;
+        let event = {
+            let mut vault = self.vault.lock().unwrap();
+            let root_secret = self.get_root_secret(vault.deref())?;
+            self.rotate_key_event(key_attributes, attributes, &root_secret, vault.deref_mut())?
+        };
         self.apply_no_verification(event)
     }
 
@@ -236,10 +248,9 @@ impl Profile {
 }
 
 impl Profile {
-    pub(crate) fn get_root_secret(&self) -> ockam_core::Result<Secret> {
+    pub(crate) fn get_root_secret(&self, vault: &dyn ProfileVault) -> ockam_core::Result<Secret> {
         let public_key = self.change_history.get_root_public_key()?;
 
-        let vault = self.vault.lock().unwrap();
         let key_id = vault.compute_key_id_for_public_key(&public_key)?;
         vault.get_secret_by_key_id(&key_id)
     }
@@ -262,6 +273,23 @@ impl Profile {
         Contact::new(
             self.identifier.clone(),
             self.change_history.as_ref().to_vec(),
+        )
+    }
+
+    pub fn generate_attestation_response(
+        &self,
+        request_data: &[u8],
+        requester_profile_id: ProfileIdentifier,
+    ) -> ockam_core::Result<Vec<u8>> {
+        let mut vault = self.vault.lock().unwrap();
+
+        let root_secret = self.get_root_secret(vault.deref())?;
+
+        Attestation::generate_attestation_response(
+            request_data,
+            requester_profile_id,
+            &root_secret,
+            vault.deref_mut(),
         )
     }
 }

@@ -1,9 +1,11 @@
-mod contact;
+use crate::attestation::Attestation;
 use crate::{OckamError, ProfileChangeEvent, ProfileIdentifier, ProfileVault};
 pub use contact::*;
 use hashbrown::HashMap;
 use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
+
+mod contact;
 
 type ContactsDb = HashMap<ProfileIdentifier, Contact>;
 
@@ -112,6 +114,39 @@ impl Contacts {
         let mut vault = self.vault.lock().unwrap();
 
         contact.verify(vault.deref_mut())
+    }
+}
+
+impl Contacts {
+    pub fn generate_attestation_request(&self) -> ockam_core::Result<Vec<u8>> {
+        let mut vault = self.vault.lock().unwrap();
+
+        Attestation::generate_attestation_request(vault.deref_mut())
+    }
+
+    pub fn verify_attestation_response(
+        &self,
+        requester_profile_id: &ProfileIdentifier,
+        request_data: &[u8],
+        responder_profile_id: &ProfileIdentifier,
+        response_data: &[u8],
+    ) -> ockam_core::Result<()> {
+        let mut vault = self.vault.lock().unwrap();
+
+        let responder_contact;
+        if let Some(c) = self.contacts.get(responder_profile_id) {
+            responder_contact = c;
+        } else {
+            return Err(OckamError::ContactNotFound.into());
+        }
+
+        Attestation::verify_attestation_response(
+            requester_profile_id,
+            request_data,
+            &responder_contact.get_root_public_key()?,
+            response_data,
+            vault.deref_mut(),
+        )
     }
 }
 

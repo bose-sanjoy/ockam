@@ -30,8 +30,10 @@ mod contacts;
 pub use contacts::*;
 mod error;
 pub use error::*;
+mod attestation;
 mod credential;
 mod lease;
+pub use attestation::*;
 
 pub use credential::*;
 pub use lease::*;
