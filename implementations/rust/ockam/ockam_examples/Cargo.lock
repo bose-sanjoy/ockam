@@ -732,6 +732,7 @@ name = "ockam"
 version = "0.2.0"
 dependencies = [
  "arrayref",
+ "async-trait",
  "bbs",
  "digest 0.8.1",
  "ff-zeroize",
@@ -763,6 +764,7 @@ dependencies = [
 name = "ockam_examples"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "ockam",
  "ockam_node",

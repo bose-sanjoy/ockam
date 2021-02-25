@@ -9,4 +9,4 @@ ockam = { path = "../ockam", version = "0" }
 ockam_node = { path = "../ockam_node", version = "0" }
 chrono = { version = "0", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
-
+async-trait = "0"
